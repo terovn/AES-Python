@@ -1,16 +1,17 @@
-License:
-  UIUC / NCSA License: http://perfsuite.ncsa.illinois.edu/LICENSE.html
+---------License --------------
 
-Usage:
+UIUC / NCSA License: http://perfsuite.ncsa.illinois.edu/LICENSE.html
 
-  Very simple. sample code below:
+--------- Usage --------------
 
-    import aes
+Very simple. sample code below:
 
-    plaintext = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdef'    
-    my_AES = AES()
+import aes
 
-    encrypted = my_AES.encrypt_string(plaintext, '1234') # encrypt_string(plaintext, password_string)
-    decrypted = my_AES.decrypt_string(encrypted, '1234') # decrypt_string(plaintext, password_string)
+plaintext = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdef'    
+my_AES = AES()
+
+encrypted = my_AES.encrypt_string(plaintext, '1234') # encrypt_string(plaintext, password_string)
+decrypted = my_AES.decrypt_string(encrypted, '1234') # decrypt_string(plaintext, password_string)
 
     
