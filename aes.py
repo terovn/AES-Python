@@ -1,5 +1,8 @@
-#!/usr/bin/env python
-
+"""------------------------------------------------------------------------------------------------------------------
+Anh:
+    Taken from https://github.com/bozhu/AES-Python/blob/master/aes.py
+    Modified to work with arbitrary strings
+---------------------------------------------------------------------------------------------------------------------"""
 
 def add_round_key(s, k):
     for i in range(4):
@@ -138,8 +141,8 @@ def matrix2text(matrix):
 
 class AES:
     "only for AES-128"
-
-    def __init__(self, master_key):
+    
+    def __init__(self, master_key = 0):
         self.change_key(master_key)
 
     def change_key(self, master_key):
@@ -166,7 +169,7 @@ class AES:
 
         # print self.round_keys
 
-    def encrypt(self, plaintext):
+    def encrypt_int_16bytes(self, plaintext):
         self.plain_state = text2matrix(plaintext)
         
         add_round_key(self.plain_state, self.round_keys[:4])
@@ -180,7 +183,7 @@ class AES:
 
         return matrix2text(self.plain_state)
 
-    def decrypt(self, ciphertext):
+    def decrypt_int_16bytes(self, ciphertext):
         self.cipher_state = text2matrix(ciphertext)
 
         add_round_key(self.cipher_state, self.round_keys[40:])
@@ -194,31 +197,117 @@ class AES:
 
         return matrix2text(self.cipher_state)
 
+    """------------------------------------------------------------------------------------------------------------"""
+    """------------------ Anh - added to be able to encrypt / decrypt strings instead of numbers ------------------"""
+    """------------------------------------------------------------------------------------------------------------"""
+    
+    def string_to_int(self, input_string):
+        output = 0
+        for c in input_string:
+            output = output * 256 + ord(c)  
+        return output
+    
+    def int_to_string(self, input_int):
+        output = ''
+        while True:
+            c = input_int % 256
+            output = chr(c) + output
+            if (input_int >= 256):
+                input_int = input_int // 256
+            else: 
+                break                
+        return output
+    
+    def decrypt_string(self, enc_string, password_string):
+    
+        if password_string != None:
+            password_string = password_string[:16]
+            self.change_key(self.string_to_int(password_string))
+        
+        #Read original data size
+        datasize = len(enc_string) 
+        
+        #Decrypt        
+        data_clear = ''
+        more_data = True
+        while more_data:
+            if (datasize > 16):
+                in_data = enc_string[:16]
+                enc_string = enc_string[16:]
+                datasize -= 16
+            else:
+                in_data = enc_string
+                more_data = False
+                                
+            out_data = self.decrypt_int_16bytes(self.string_to_int(in_data))
+            data_clear += self.int_to_string(out_data)
+        
+        #decrypted string has this format : <size of org_string, org_string with extra random padding at the end>
+        #need to parse and return the org_string
+        self._salt = None
+        org_string = data_clear        
+        index = data_clear.find(',')       
+        
+        try: #dont return error if index is wrong, because that gives out information to attacker
+            org_size = int(data_clear[:index])
+            org_string = data_clear[index + 1:]
+            org_string = org_string[:org_size]
+        except:
+            pass
+        finally:    
+            return org_string
+    
+    def encrypt_string(self, input_string, password_string):    
+        
+        if password_string != None:
+            password_string = password_string[:16]
+        self.change_key(self.string_to_int(password_string))
+            
+        #Get size of clear data to store in encrypted data
+        data_size = len(input_string)        
+       
+        #Append size of the clear-text string to the beginning of the string itself
+        data_clear = '%d,%s' % (data_size, input_string)
+        data_size = len(data_clear)       
+        
+        #Encrypt
+        encypted_string = ''        
+        more_data = True
+        while more_data:
+            if (data_size > 16):
+                in_data = data_clear[:16]
+                data_clear = data_clear[16:]
+                data_size -= 16
+            else:
+                in_data = data_clear
+                more_data = False
+                                
+            out_data = self.encrypt_int_16bytes(self.string_to_int(in_data))
+            encypted_string += self.int_to_string(out_data)
 
+        return encypted_string
+
+    """------------------------------------------------------------------------------------------------------------"""
+    """------------------------------------------------------------------------------------------------------------"""
+    """------------------------------------------------------------------------------------------------------------"""
+    
 if __name__ == '__main__':
-    plaintext = 0x3243f6a8885a308d313198a2e0370734
+    plaintext = 'abcdefabcdefabcdefabcdefabcdefabcdefabcdef'    
     master_key = 0x2b7e151628aed2a6abf7158809cf4f3c
     # the ciphertext should be
     # 0x3925841d02dc09fbdc118597196a0b32
 
     my_AES = AES(master_key)
 
-    encrypted = my_AES.encrypt(plaintext)
-    decrypted = my_AES.decrypt(encrypted)
+    encrypted = my_AES.encrypt_string(plaintext, '1234')
+    decrypted = my_AES.decrypt_string(encrypted, '1234')
 
-    print 'plaintext:', hex(plaintext)
-    print 'masterkey:', hex(master_key)
-
-    print 'encrypted:', hex(encrypted),
-    if encrypted == 0x3925841d02dc09fbdc118597196a0b32:
-        print 'correct!'
-    else:
-        print 'wrong...'
-    print 'should be:', hex(0x3925841d02dc09fbdc118597196a0b32)
-
-    print 'decrypted:', hex(decrypted),
+    print 'plaintext:', plaintext
+    print 'encrypted:', encrypted   
+    print 'decrypted:', decrypted
+    
     if decrypted == plaintext:
         print 'correct!'
     else:
         print 'wrong...'
-    
+     
